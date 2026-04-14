@@ -16,6 +16,7 @@ export default function CymaticsApp() {
   const [isActive, setIsActive] = useState(false);
   const [analyser, setAnalyser] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const canvasRef = useRef(null);
 
@@ -23,6 +24,7 @@ export default function CymaticsApp() {
   const handleModesChange = useCallback((newN, newM) => { setN(newN); setM(newM); }, []);
   const handleActiveChange = useCallback((active) => setIsActive(active), []);
   const handleAnalyserReady = useCallback((a) => setAnalyser(a), []);
+  const handleZoomChange = useCallback((z) => setZoom(z), []);
 
   const handleModeChange = useCallback((newMode) => {
     setMode(newMode);
@@ -66,6 +68,8 @@ export default function CymaticsApp() {
           m={m}
           isActive={isActive}
           analyser={analyser}
+          zoom={zoom}
+          onZoomChange={handleZoomChange}
         />
         {/* Overlay info */}
         <div className="absolute bottom-2 right-3 text-[11px] tabular-nums opacity-60" style={{ color: accentColor }}>
@@ -85,16 +89,64 @@ export default function CymaticsApp() {
         )}
       </div>
 
-      {/* Scatter button */}
-      <button
-        onClick={() => {
-          const canvas = document.querySelector("canvas");
-          if (canvas?.__scatter) canvas.__scatter();
-        }}
-        className="mb-4 px-4 py-1.5 rounded-full text-[10px] text-[#665f80] border border-[#2a2540] tracking-wider hover:border-[#4a4560] transition-colors"
-      >
-        Scatter Particles
-      </button>
+      {/* Zoom + Scatter controls */}
+      <div className="flex items-center gap-3 mb-4" style={{ width: PLATE_SIZE }}>
+        {/* Zoom control */}
+        <div className="flex items-center gap-2 flex-1">
+          <button
+            onClick={() => setZoom(Math.max(0.5, Math.round((zoom - 0.5) * 10) / 10))}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-sm transition-colors"
+            style={{
+              border: `1px solid hsl(${hueBase}, 50%, 25%)`,
+              color: accentColor,
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            -
+          </button>
+          <div className="flex-1">
+            <div className="flex justify-between text-[8px] text-[#665f80] mb-0.5 tracking-wider">
+              <span>1x</span>
+              <span style={{ color: zoom > 1 ? accentColor : "#665f80" }}>
+                Pattern Repeat: {zoom}x
+              </span>
+              <span>5x</span>
+            </div>
+            <input
+              type="range"
+              min={0.5}
+              max={5}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="w-full h-1 rounded-full appearance-none cursor-pointer"
+              style={{ accentColor }}
+            />
+          </div>
+          <button
+            onClick={() => setZoom(Math.min(5, Math.round((zoom + 0.5) * 10) / 10))}
+            className="w-7 h-7 rounded-md flex items-center justify-center text-sm transition-colors"
+            style={{
+              border: `1px solid hsl(${hueBase}, 50%, 25%)`,
+              color: accentColor,
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            +
+          </button>
+        </div>
+
+        {/* Scatter */}
+        <button
+          onClick={() => {
+            const canvas = document.querySelector("canvas");
+            if (canvas?.__scatter) canvas.__scatter();
+          }}
+          className="px-3 py-1.5 rounded-full text-[10px] text-[#665f80] border border-[#2a2540] tracking-wider hover:border-[#4a4560] transition-colors shrink-0"
+        >
+          Scatter
+        </button>
+      </div>
 
       {/* Mode selector */}
       <div className="w-full max-w-md mb-5">

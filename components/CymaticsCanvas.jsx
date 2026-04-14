@@ -5,7 +5,7 @@ import { getAmplitude } from "@/lib/audioAnalysis";
 
 const PARTICLE_COUNT = 5000;
 
-export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) {
+export default function CymaticsCanvas({ frequency, n, m, isActive, analyser, zoom = 1, onZoomChange }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef(null);
   const animRef = useRef(null);
@@ -14,12 +14,14 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) 
   const freqRef = useRef(frequency);
   const activeRef = useRef(isActive);
   const analyserRef = useRef(analyser);
+  const zoomRef = useRef(zoom);
 
   useEffect(() => { nRef.current = n; }, [n]);
   useEffect(() => { mRef.current = m; }, [m]);
   useEffect(() => { freqRef.current = frequency; }, [frequency]);
   useEffect(() => { activeRef.current = isActive; }, [isActive]);
   useEffect(() => { analyserRef.current = analyser; }, [analyser]);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
 
   const initParticles = useCallback(() => {
     const particles = [];
@@ -45,6 +47,60 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) 
     }
   }, [initParticles]);
 
+  // Mouse wheel zoom
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !onZoomChange) return;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.15 : 0.15;
+      const newZoom = Math.max(0.5, Math.min(5, zoomRef.current + delta));
+      onZoomChange(Math.round(newZoom * 10) / 10);
+    };
+
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, [onZoomChange]);
+
+  // Pinch-to-zoom
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !onZoomChange) return;
+
+    let lastDist = 0;
+
+    const getDistance = (touches) => {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        lastDist = getDistance(e.touches);
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dist = getDistance(e.touches);
+        const delta = (dist - lastDist) * 0.005;
+        const newZoom = Math.max(0.5, Math.min(5, zoomRef.current + delta));
+        onZoomChange(Math.round(newZoom * 10) / 10);
+        lastDist = dist;
+      }
+    };
+
+    canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => {
+      canvas.removeEventListener("touchstart", handleTouchStart);
+      canvas.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, [onZoomChange]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -60,6 +116,7 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) 
       time += 0.016;
       const cn = nRef.current;
       const cm = mRef.current;
+      const cz = zoomRef.current;
       const particles = particlesRef.current;
       if (!particles) {
         animRef.current = requestAnimationFrame(animate);
@@ -75,8 +132,8 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) 
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-        const val = chladniValue(p.x, p.y, cn, cm);
-        const [gx, gy] = chladniGradient(p.x, p.y, cn, cm);
+        const val = chladniValue(p.x, p.y, cn, cm, 1, cz);
+        const [gx, gy] = chladniGradient(p.x, p.y, cn, cm, 1, cz);
         const mag = Math.sqrt(gx * gx + gy * gy) + 0.001;
 
         const fx = -(val * gx / mag) * speed * amp;
@@ -106,7 +163,7 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) 
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-        const val = Math.abs(chladniValue(p.x, p.y, cn, cm));
+        const val = Math.abs(chladniValue(p.x, p.y, cn, cm, 1, cz));
         const nearNodeLine = Math.max(0, 1 - val * 3);
         const glow = nearNodeLine * p.brightness * amp;
 
@@ -151,6 +208,7 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser }) 
         height: PLATE_SIZE,
         display: "block",
         borderRadius: 8,
+        touchAction: "none",
       }}
     />
   );
