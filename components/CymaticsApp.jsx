@@ -4,6 +4,7 @@ import CymaticsCanvas from "./CymaticsCanvas";
 import ToneGenerator from "./ToneGenerator";
 import MicrophoneInput from "./MicrophoneInput";
 import FilePlayer from "./FilePlayer";
+import SampleLibrary from "./SampleLibrary";
 import ModeSelector from "./ModeSelector";
 import { PLATE_SIZE } from "@/lib/chladni";
 
@@ -74,7 +75,7 @@ export default function CymaticsApp() {
           n={n} m={m}
         </div>
         <div className="absolute top-2 right-3 text-[9px] uppercase tracking-wider opacity-40" style={{ color: accentColor }}>
-          {mode === "tone" ? "Tone" : mode === "mic" ? "Live Mic" : "Audio File"}
+          {mode === "tone" ? "Tone" : mode === "mic" ? "Live Mic" : mode === "samples" ? "Sample" : "Audio File"}
         </div>
         {isActive && (
           <div className="absolute top-2 left-3 flex items-center gap-1.5">
@@ -120,6 +121,14 @@ export default function CymaticsApp() {
         )}
         {mode === "file" && (
           <FilePlayer
+            onFrequencyChange={handleFreqChange}
+            onModesChange={handleModesChange}
+            onActiveChange={handleActiveChange}
+            onAnalyserReady={handleAnalyserReady}
+          />
+        )}
+        {mode === "samples" && (
+          <SampleLibrary
             onFrequencyChange={handleFreqChange}
             onModesChange={handleModesChange}
             onActiveChange={handleActiveChange}

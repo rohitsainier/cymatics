@@ -4,6 +4,7 @@ const MODES = [
   { id: "tone", label: "Tone", icon: "M9 18V5l12-2v13M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
   { id: "mic", label: "Microphone", icon: "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" },
   { id: "file", label: "Audio File", icon: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M10 12l4 4M14 12l-4 4" },
+  { id: "samples", label: "Samples", icon: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" },
 ];
 
 export default function ModeSelector({ activeMode, onModeChange, accentColor }) {
