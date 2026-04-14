@@ -40,12 +40,39 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser, zo
 
   useEffect(() => { initParticles(); }, [initParticles]);
 
-  // Expose scatter
+  // Kick: give all particles a random velocity burst (they flow back to pattern)
+  const kickParticles = useCallback(() => {
+    const particles = particlesRef.current;
+    if (!particles) return;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      const angle = Math.random() * Math.PI * 2;
+      const force = 2 + Math.random() * 4;
+      p.vx += Math.cos(angle) * force;
+      p.vy += Math.sin(angle) * force;
+    }
+  }, []);
+
+  // Full scatter: randomize positions entirely
+  const fullScatter = useCallback(() => {
+    const particles = particlesRef.current;
+    if (!particles) return;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x = Math.random() * PLATE_SIZE;
+      p.y = Math.random() * PLATE_SIZE;
+      p.vx = 0;
+      p.vy = 0;
+    }
+  }, []);
+
+  // Expose both scatter modes
   useEffect(() => {
     if (canvasRef.current) {
-      canvasRef.current.__scatter = initParticles;
+      canvasRef.current.__kick = kickParticles;
+      canvasRef.current.__scatter = fullScatter;
     }
-  }, [initParticles]);
+  }, [kickParticles, fullScatter]);
 
   // Mouse wheel zoom
   useEffect(() => {

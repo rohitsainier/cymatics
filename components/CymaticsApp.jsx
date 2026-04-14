@@ -164,11 +164,22 @@ export default function CymaticsApp() {
           <button
             onClick={() => {
               const canvas = document.querySelector("canvas");
+              if (canvas?.__kick) canvas.__kick();
+            }}
+            className="px-2 py-1 rounded-full text-[9px] text-[#665f80] border border-[#2a2540] tracking-wider hover:border-[#4a4560] transition-colors shrink-0"
+            title="Shake particles — they flow back to pattern"
+          >
+            Shake
+          </button>
+          <button
+            onClick={() => {
+              const canvas = document.querySelector("canvas");
               if (canvas?.__scatter) canvas.__scatter();
             }}
-            className="px-2.5 py-1 rounded-full text-[9px] text-[#665f80] border border-[#2a2540] tracking-wider hover:border-[#4a4560] transition-colors shrink-0"
+            className="px-2 py-1 rounded-full text-[9px] text-[#665f80] border border-[#2a2540] tracking-wider hover:border-[#4a4560] transition-colors shrink-0"
+            title="Reset all particles to random positions"
           >
-            Scatter
+            Reset
           </button>
         </div>
       </div>
