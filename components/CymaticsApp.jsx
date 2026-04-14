@@ -1,10 +1,12 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
 import CymaticsCanvas from "./CymaticsCanvas";
+import WaterCanvas from "./WaterCanvas";
 import ToneGenerator from "./ToneGenerator";
 import MicrophoneInput from "./MicrophoneInput";
 import FilePlayer from "./FilePlayer";
 import SampleLibrary from "./SampleLibrary";
+import FrequencyLayers from "./FrequencyLayers";
 import ModeSelector, { VerticalModeSelector } from "./ModeSelector";
 import { exportPNG, startRecording, stopRecording, canRecord, isRecording, getRecordingDuration } from "@/lib/exportUtils";
 import SessionTimer from "./SessionTimer";
@@ -23,6 +25,9 @@ export default function CymaticsApp() {
   const [recording, setRecording] = useState(false);
   const [recDuration, setRecDuration] = useState(0);
   const [supportsRecord, setSupportsRecord] = useState(false);
+  const [plateShape, setPlateShape] = useState("rectangular");
+  const [renderMode, setRenderMode] = useState("particles");
+  const [layers, setLayers] = useState(null);
 
   const canvasRef = useRef(null);
   const toneRef = useRef(null);
@@ -168,6 +173,42 @@ export default function CymaticsApp() {
                 {mode === "samples" && "Sacred sounds with harmonics. Compare the live pattern to the reference image."}
               </p>
             )}
+
+            {/* Visualization toggles */}
+            <div className="flex gap-1.5 mt-2">
+              {/* Plate shape */}
+              {[
+                { id: "rectangular", label: "Square" },
+                { id: "circular", label: "Circle" },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setPlateShape(id)}
+                  className="flex-1 py-1 rounded text-[8px] tracking-wider text-center transition-all"
+                  style={{
+                    background: plateShape === id ? `${accentColor}18` : "transparent",
+                    color: plateShape === id ? accentColor : "#554f70",
+                    border: `1px solid ${plateShape === id ? accentColor + "50" : "#1a1728"}`,
+                  }}
+                >{label}</button>
+              ))}
+              {/* Render mode */}
+              {[
+                { id: "particles", label: "Particles" },
+                { id: "water", label: "Water" },
+              ].map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setRenderMode(id)}
+                  className="flex-1 py-1 rounded text-[8px] tracking-wider text-center transition-all"
+                  style={{
+                    background: renderMode === id ? `${accentColor}18` : "transparent",
+                    color: renderMode === id ? accentColor : "#554f70",
+                    border: `1px solid ${renderMode === id ? accentColor + "50" : "#1a1728"}`,
+                  }}
+                >{label}</button>
+              ))}
+            </div>
           </div>
 
           {/* Scrollable mode controls or session timer */}
@@ -181,7 +222,13 @@ export default function CymaticsApp() {
                 accentColor={accentColor}
               />
             ) : (
-              modeControls
+              <>
+                {modeControls}
+                {/* Frequency layers */}
+                <div className="mt-4">
+                  <FrequencyLayers layers={layers} onLayersChange={setLayers} accentColor={accentColor} />
+                </div>
+              </>
             )}
           </div>
 
@@ -260,17 +307,23 @@ export default function CymaticsApp() {
               transition: "width 0.3s ease, height 0.3s ease",
             }}
           >
-            <CymaticsCanvas
-              ref={canvasRef}
-              frequency={frequency}
-              n={n}
-              m={m}
-              isActive={isActive}
-              analyser={analyser}
-              zoom={zoom}
-              onZoomChange={handleZoomChange}
-            />
-            {/* Minimal overlays — just data, no chrome */}
+            {renderMode === "water" ? (
+              <WaterCanvas
+                ref={canvasRef}
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser} zoom={zoom}
+                plateShape={plateShape} layers={layers}
+              />
+            ) : (
+              <CymaticsCanvas
+                ref={canvasRef}
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser}
+                zoom={zoom} onZoomChange={handleZoomChange}
+                plateShape={plateShape} layers={layers}
+              />
+            )}
+            {/* Minimal overlays */}
             <div className="absolute bottom-2 right-3 text-[10px] tabular-nums opacity-40" style={{ color: accentColor }}>
               {frequency} Hz
             </div>
