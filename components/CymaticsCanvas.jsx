@@ -16,8 +16,34 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser, zo
   const analyserRef = useRef(analyser);
   const zoomRef = useRef(zoom);
 
-  useEffect(() => { nRef.current = n; }, [n]);
-  useEffect(() => { mRef.current = m; }, [m]);
+  const prevNRef = useRef(n);
+  const prevMRef = useRef(m);
+
+  // Auto-kick particles when pattern changes so they rush to the new shape
+  useEffect(() => {
+    if (n !== prevNRef.current || m !== prevMRef.current) {
+      const particles = particlesRef.current;
+      if (particles) {
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          const angle = Math.random() * Math.PI * 2;
+          const force = 1.5 + Math.random() * 3;
+          p.vx += Math.cos(angle) * force;
+          p.vy += Math.sin(angle) * force;
+        }
+      }
+      prevNRef.current = n;
+      prevMRef.current = m;
+    }
+    nRef.current = n;
+  }, [n]);
+
+  useEffect(() => {
+    if (m !== prevMRef.current) {
+      prevMRef.current = m;
+    }
+    mRef.current = m;
+  }, [m]);
   useEffect(() => { freqRef.current = frequency; }, [frequency]);
   useEffect(() => { activeRef.current = isActive; }, [isActive]);
   useEffect(() => { analyserRef.current = analyser; }, [analyser]);
