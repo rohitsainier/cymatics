@@ -1,14 +1,17 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import CymaticsCanvas from "./CymaticsCanvas";
 import ToneGenerator from "./ToneGenerator";
 import MicrophoneInput from "./MicrophoneInput";
 import FilePlayer from "./FilePlayer";
 import SampleLibrary from "./SampleLibrary";
 import ModeSelector, { VerticalModeSelector } from "./ModeSelector";
+import { exportPNG, startRecording, stopRecording, canRecord, isRecording, getRecordingDuration } from "@/lib/exportUtils";
+import SessionTimer from "./SessionTimer";
 
 export default function CymaticsApp() {
   const [mode, setMode] = useState("tone");
+  const [showSession, setShowSession] = useState(false);
   const [frequency, setFrequency] = useState(528);
   const [n, setN] = useState(5);
   const [m, setM] = useState(2);
@@ -17,8 +20,27 @@ export default function CymaticsApp() {
   const [showInfo, setShowInfo] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [recording, setRecording] = useState(false);
+  const [recDuration, setRecDuration] = useState(0);
+  const [supportsRecord, setSupportsRecord] = useState(false);
 
   const canvasRef = useRef(null);
+  const toneRef = useRef(null);
+
+  // Check MediaRecorder support client-side only
+  useEffect(() => { setSupportsRecord(canRecord()); }, []);
+  const recTimerRef = useRef(null);
+
+  // Recording duration counter
+  useEffect(() => {
+    if (recording) {
+      recTimerRef.current = setInterval(() => setRecDuration(getRecordingDuration()), 500);
+    } else {
+      if (recTimerRef.current) clearInterval(recTimerRef.current);
+      setRecDuration(0);
+    }
+    return () => { if (recTimerRef.current) clearInterval(recTimerRef.current); };
+  }, [recording]);
 
   const handleFreqChange = useCallback((f) => setFrequency(f), []);
   const handleModesChange = useCallback((newN, newM) => { setN(newN); setM(newM); }, []);
@@ -44,6 +66,7 @@ export default function CymaticsApp() {
     <>
       {mode === "tone" && (
         <ToneGenerator
+          ref={toneRef}
           onFrequencyChange={handleFreqChange}
           onModesChange={handleModesChange}
           onActiveChange={handleActiveChange}
@@ -113,15 +136,29 @@ export default function CymaticsApp() {
           {/* Panel header */}
           <div className="shrink-0 px-4 pt-3 pb-2 border-b border-[#1a1728]">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] tracking-[2px] uppercase" style={{ color: accentColor }}>
-                {modeLabel}
+              <span className="text-[10px] tracking-[2px] uppercase" style={{ color: showSession ? "#6bcb77" : accentColor }}>
+                {showSession ? "Session" : modeLabel}
               </span>
-              <button
-                onClick={() => setShowInfo(!showInfo)}
-                className="text-[8px] text-[#554f70] hover:text-[#8880a0] tracking-wider transition-colors"
-              >
-                {showInfo ? "Hide info" : "Info"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setShowSession(!showSession); if (!showSession) { setMode("tone"); } }}
+                  className="text-[8px] tracking-wider transition-colors px-2 py-0.5 rounded"
+                  style={{
+                    color: showSession ? "#6bcb77" : "#554f70",
+                    border: `1px solid ${showSession ? "#6bcb7740" : "transparent"}`,
+                    background: showSession ? "#6bcb7710" : "transparent",
+                  }}
+                  title="Guided meditation sessions"
+                >
+                  {showSession ? "Controls" : "Timer"}
+                </button>
+                <button
+                  onClick={() => setShowInfo(!showInfo)}
+                  className="text-[8px] text-[#554f70] hover:text-[#8880a0] tracking-wider transition-colors"
+                >
+                  {showInfo ? "Hide" : "Info"}
+                </button>
+              </div>
             </div>
             {showInfo && (
               <p className="text-[9px] text-[#665f80] leading-relaxed mt-2">
@@ -133,9 +170,19 @@ export default function CymaticsApp() {
             )}
           </div>
 
-          {/* Scrollable mode controls */}
+          {/* Scrollable mode controls or session timer */}
           <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
-            {modeControls}
+            {showSession ? (
+              <SessionTimer
+                toneRef={toneRef}
+                onFrequencyChange={handleFreqChange}
+                onModesChange={handleModesChange}
+                onClose={() => setShowSession(false)}
+                accentColor={accentColor}
+              />
+            ) : (
+              modeControls
+            )}
           </div>
 
           {/* Zoom bar at bottom of panel */}
@@ -170,6 +217,33 @@ export default function CymaticsApp() {
                 className="flex-1 py-1 rounded text-[8px] tracking-wider text-center"
                 style={{ color: "#665f80", border: "1px solid #1a1728" }}
               >Reset</button>
+            </div>
+            {/* Export buttons */}
+            <div className="flex gap-1.5 mt-1.5">
+              <button
+                onClick={() => exportPNG(canvasRef.current, frequency, n, m)}
+                className="flex-1 py-1 rounded text-[8px] tracking-wider text-center"
+                style={{ color: accentColor, border: `1px solid ${accentDim}` }}
+              >PNG</button>
+              {supportsRecord && (
+                <button
+                  onClick={async () => {
+                    if (recording) {
+                      await stopRecording(frequency, n, m);
+                      setRecording(false);
+                    } else {
+                      startRecording(canvasRef.current, 30);
+                      setRecording(true);
+                    }
+                  }}
+                  className="flex-1 py-1 rounded text-[8px] tracking-wider text-center"
+                  style={{
+                    color: recording ? "#ff4444" : accentColor,
+                    border: `1px solid ${recording ? "#ff444460" : accentDim}`,
+                    background: recording ? "#ff444410" : "transparent",
+                  }}
+                >{recording ? `Stop ${recDuration}s` : "Record"}</button>
+              )}
             </div>
           </div>
         </div>

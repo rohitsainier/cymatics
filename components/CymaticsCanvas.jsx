@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { chladniValue, chladniGradient, PLATE_SIZE } from "@/lib/chladni";
 import { getAmplitude } from "@/lib/audioAnalysis";
 
 const PARTICLE_COUNT = 5000;
 
-export default function CymaticsCanvas({ frequency, n, m, isActive, analyser, zoom = 1, onZoomChange }) {
+const CymaticsCanvas = forwardRef(function CymaticsCanvas({ frequency, n, m, isActive, analyser, zoom = 1, onZoomChange }, ref) {
   const canvasRef = useRef(null);
+
+  // Expose the raw canvas element to parent for export
+  useImperativeHandle(ref, () => canvasRef.current);
   const particlesRef = useRef(null);
   const animRef = useRef(null);
   const nRef = useRef(n);
@@ -265,4 +268,6 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser, zo
       }}
     />
   );
-}
+});
+
+export default CymaticsCanvas;

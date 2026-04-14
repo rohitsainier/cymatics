@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { PRESETS, frequencyToModes } from "@/lib/chladni";
+import { createBinauralGraph, BINAURAL_PRESETS } from "@/lib/binauralAudio";
 
-export default function ToneGenerator({ onFrequencyChange, onModesChange, onActiveChange, onAnalyserReady }) {
+const ToneGenerator = forwardRef(function ToneGenerator({ onFrequencyChange, onModesChange, onActiveChange, onAnalyserReady }, ref) {
   const [frequency, setFrequency] = useState(528);
   const [n, setN] = useState(5);
   const [m, setM] = useState(2);
@@ -10,9 +11,13 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
   const [volume, setVolume] = useState(0.25);
   const [waveType, setWaveType] = useState("sine");
   const [activePreset, setActivePreset] = useState(5);
+  const [isBinaural, setIsBinaural] = useState(false);
+  const [beatFreq, setBeatFreq] = useState(10);
+  const [binauralPreset, setBinauralPreset] = useState(2); // Alpha default
 
   const audioCtxRef = useRef(null);
   const oscRef = useRef(null);
+  const osc2Ref = useRef(null);
   const gainRef = useRef(null);
   const analyserRef = useRef(null);
 
@@ -20,10 +25,47 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
   useEffect(() => { onModesChange(n, m); }, [n, m, onModesChange]);
   useEffect(() => { onActiveChange(isPlaying); }, [isPlaying, onActiveChange]);
 
+  // Expose imperative control for session timer
+  useImperativeHandle(ref, () => ({
+    play: () => { if (!isPlaying) startAudio(); },
+    stop: () => { if (isPlaying) stopAudio(); },
+    setFreq: (f) => {
+      setFrequency(f);
+      const modes = frequencyToModes(f);
+      setN(modes.n);
+      setM(modes.m);
+    },
+    setVol: (v) => setVolume(v),
+    isPlaying: () => isPlaying,
+  }));
+
+  const destroyAudio = useCallback(() => {
+    if (oscRef.current) { try { oscRef.current.stop(); } catch {} }
+    if (osc2Ref.current) { try { osc2Ref.current.stop(); } catch {} }
+    if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+      audioCtxRef.current.close();
+    }
+    audioCtxRef.current = null;
+    oscRef.current = null;
+    osc2Ref.current = null;
+    gainRef.current = null;
+    analyserRef.current = null;
+  }, []);
+
   const startAudio = useCallback(() => {
-    if (!audioCtxRef.current) {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      audioCtxRef.current = ctx;
+    // Destroy previous context to rebuild graph cleanly
+    destroyAudio();
+
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtxRef.current = ctx;
+
+    if (isBinaural) {
+      const graph = createBinauralGraph(ctx, frequency, beatFreq, volume, waveType);
+      oscRef.current = graph.osc1;
+      osc2Ref.current = graph.osc2;
+      gainRef.current = graph.gain;
+      analyserRef.current = graph.analyser;
+    } else {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       const analyser = ctx.createAnalyser();
@@ -38,41 +80,59 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
       oscRef.current = osc;
       gainRef.current = gain;
       analyserRef.current = analyser;
-      onAnalyserReady(analyser);
-    } else {
-      audioCtxRef.current.resume();
     }
+
+    onAnalyserReady(analyserRef.current);
     setIsPlaying(true);
-  }, [frequency, volume, waveType, onAnalyserReady]);
+  }, [frequency, volume, waveType, isBinaural, beatFreq, onAnalyserReady, destroyAudio]);
 
   const stopAudio = useCallback(() => {
     if (audioCtxRef.current) audioCtxRef.current.suspend();
     setIsPlaying(false);
   }, []);
 
+  // Frequency updates
   useEffect(() => {
-    if (oscRef.current) {
+    if (oscRef.current && audioCtxRef.current) {
       oscRef.current.frequency.setTargetAtTime(frequency, audioCtxRef.current.currentTime, 0.05);
     }
-  }, [frequency]);
+    if (osc2Ref.current && audioCtxRef.current && isBinaural) {
+      osc2Ref.current.frequency.setTargetAtTime(frequency + beatFreq, audioCtxRef.current.currentTime, 0.05);
+    }
+  }, [frequency, beatFreq, isBinaural]);
 
+  // Beat frequency update
   useEffect(() => {
-    if (gainRef.current) {
+    if (osc2Ref.current && audioCtxRef.current && isBinaural) {
+      osc2Ref.current.frequency.setTargetAtTime(frequency + beatFreq, audioCtxRef.current.currentTime, 0.05);
+    }
+  }, [beatFreq, frequency, isBinaural]);
+
+  // Volume updates
+  useEffect(() => {
+    if (gainRef.current && audioCtxRef.current) {
       gainRef.current.gain.setTargetAtTime(volume, audioCtxRef.current.currentTime, 0.05);
     }
   }, [volume]);
 
+  // Wave type — requires rebuild if playing
   useEffect(() => {
     if (oscRef.current) oscRef.current.type = waveType;
+    if (osc2Ref.current) osc2Ref.current.type = waveType;
   }, [waveType]);
+
+  // Binaural toggle — restart audio to rebuild graph
+  useEffect(() => {
+    if (isPlaying) {
+      startAudio();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBinaural]);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      if (oscRef.current) { try { oscRef.current.stop(); } catch {} }
-      if (audioCtxRef.current) audioCtxRef.current.close();
-    };
-  }, []);
+    return () => destroyAudio();
+  }, [destroyAudio]);
 
   const selectPreset = (idx) => {
     const p = PRESETS[idx];
@@ -87,12 +147,12 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
   const accentDim = `hsl(${hueBase}, 50%, 25%)`;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Play button + wave type */}
-      <div className="flex items-center gap-3 justify-center">
+      <div className="flex items-center gap-2 justify-center flex-wrap">
         <button
           onClick={() => isPlaying ? stopAudio() : startAudio()}
-          className="px-6 py-2.5 rounded-full text-xs font-medium tracking-widest uppercase transition-all duration-300"
+          className="px-5 py-2 rounded-full text-xs font-medium tracking-widest uppercase transition-all duration-300"
           style={{
             background: isPlaying ? accentDim : accent,
             color: isPlaying ? accent : "#08060e",
@@ -106,7 +166,7 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
           <button
             key={type}
             onClick={() => setWaveType(type)}
-            className="px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider transition-all"
+            className="px-2.5 py-1 rounded-md text-[9px] uppercase tracking-wider transition-all"
             style={{
               background: waveType === type ? `${accent}20` : "transparent",
               color: waveType === type ? accent : "#665f80",
@@ -126,11 +186,7 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
           <span>4000 Hz</span>
         </div>
         <input
-          type="range"
-          min={20}
-          max={4000}
-          step={1}
-          value={frequency}
+          type="range" min={20} max={4000} step={1} value={frequency}
           onChange={(e) => {
             const f = Number(e.target.value);
             setFrequency(f);
@@ -152,15 +208,71 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
           <span>Loud</span>
         </div>
         <input
-          type="range"
-          min={0}
-          max={0.5}
-          step={0.01}
-          value={volume}
+          type="range" min={0} max={0.5} step={0.01} value={volume}
           onChange={(e) => setVolume(Number(e.target.value))}
           className="w-full h-1 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: "#665f80" }}
         />
+      </div>
+
+      {/* ── Binaural Beats ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[9px] tracking-[3px] text-[#665f80] uppercase">Binaural Beats</p>
+          <button
+            onClick={() => setIsBinaural(!isBinaural)}
+            className="px-3 py-1 rounded-full text-[8px] uppercase tracking-wider transition-all"
+            style={{
+              background: isBinaural ? `${accent}25` : "transparent",
+              color: isBinaural ? accent : "#554f70",
+              border: `1px solid ${isBinaural ? accent + "60" : "#1a1728"}`,
+            }}
+          >
+            {isBinaural ? "On" : "Off"}
+          </button>
+        </div>
+
+        {isBinaural && (
+          <div className="space-y-2">
+            {/* Beat frequency slider */}
+            <div>
+              <div className="flex justify-between text-[8px] text-[#665f80] mb-0.5 tracking-wider">
+                <span>1 Hz</span>
+                <span style={{ color: accent }}>Beat: {beatFreq} Hz</span>
+                <span>40 Hz</span>
+              </div>
+              <input
+                type="range" min={1} max={40} step={0.5} value={beatFreq}
+                onChange={(e) => { setBeatFreq(Number(e.target.value)); setBinauralPreset(-1); }}
+                className="w-full h-1 rounded-full appearance-none cursor-pointer"
+                style={{ accentColor: accent }}
+              />
+            </div>
+
+            {/* Brainwave presets */}
+            <div className="flex gap-1">
+              {BINAURAL_PRESETS.map((bp, i) => (
+                <button
+                  key={bp.label}
+                  onClick={() => { setBeatFreq(bp.beatFreq); setBinauralPreset(i); }}
+                  className="flex-1 py-1.5 rounded text-center transition-all"
+                  style={{
+                    background: binauralPreset === i ? `${accent}18` : "rgba(255,255,255,0.02)",
+                    border: `1px solid ${binauralPreset === i ? accent + "50" : "#1a1728"}`,
+                    color: binauralPreset === i ? accent : "#665f80",
+                  }}
+                >
+                  <div className="text-[8px] font-medium">{bp.label}</div>
+                  <div className="text-[7px] opacity-60">{bp.beatFreq}Hz</div>
+                </button>
+              ))}
+            </div>
+
+            <p className="text-[7px] text-[#4a4560] text-center tracking-wider">
+              Use headphones for binaural effect
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Healing frequency presets */}
@@ -219,4 +331,6 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
       </div>
     </div>
   );
-}
+});
+
+export default ToneGenerator;
