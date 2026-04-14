@@ -47,7 +47,7 @@ export default function FilePlayer({ onFrequencyChange, onModesChange, onActiveC
       const b = getFrequencyBands(analyserRef.current);
       setBands(b);
 
-      if (freq > 60 && freq < 1200) {
+      if (freq > 40 && freq < 6000) {
         setDetectedFreq(Math.round(freq));
         onFrequencyChange(Math.round(freq));
         const modes = frequencyToModes(freq);

@@ -121,14 +121,14 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
       {/* Frequency slider */}
       <div>
         <div className="flex justify-between text-[9px] text-[#665f80] mb-1 tracking-wider">
-          <span>100 Hz</span>
+          <span>20 Hz</span>
           <span style={{ color: accent }}>Frequency: {frequency} Hz</span>
-          <span>1000 Hz</span>
+          <span>4000 Hz</span>
         </div>
         <input
           type="range"
-          min={100}
-          max={1000}
+          min={20}
+          max={4000}
           step={1}
           value={frequency}
           onChange={(e) => {
@@ -199,7 +199,7 @@ export default function ToneGenerator({ onFrequencyChange, onModesChange, onActi
           ].map(({ label, value, setter }) => (
             <div key={label} className="flex items-center justify-center gap-1.5">
               <span className="text-[9px] text-[#665f80] w-8 text-right">{label}</span>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((v) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 15].map((v) => (
                 <button
                   key={v}
                   onClick={() => { setter(v); setActivePreset(-1); }}
