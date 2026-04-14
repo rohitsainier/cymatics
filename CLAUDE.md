@@ -4,41 +4,68 @@
 
 ## Project Overview
 Real-time cymatics simulator built with Next.js 15 (App Router) + Tailwind CSS v4 + Web Audio API.
-Generates Chladni plate patterns driven by sound — particles migrate to nodal lines like sand on a vibrating plate.
+Generates Chladni/Bessel plate patterns driven by sound — particles or 3D water surface visualization.
 
 ## Architecture
 
 ### Audio Modes
-Four input modes all feed into a shared cymatics renderer:
-- **Tone Generator** — built-in oscillator (sine/square/triangle/sawtooth) with healing frequency presets
-- **Microphone** — live audio capture via `getUserMedia`, autocorrelation pitch detection
+Four input modes all feed into a shared renderer:
+- **Tone Generator** — oscillator (sine/square/triangle/sawtooth) + binaural beats (dual-oscillator stereo panning, 5 brainwave presets)
+- **Microphone** — live audio capture via `getUserMedia`, YIN pitch detection with median smoothing
 - **Audio File** — drag-and-drop upload, `MediaElementSource` playback with FFT analysis
-- **Sample Library** — 8 sacred/famous sounds (Om, Crystal Bowl, Tibetan Bowl, Solfeggio tones) synthesized with harmonics, each paired with a reference Chladni pattern image for visual verification
+- **Sample Library** — 8 sacred sounds with multi-oscillator synthesis + reference pattern images
 
-### Pattern Zoom / Tiling
-The Chladni function accepts a `scale` parameter that tiles the pattern within the canvas:
-- scale=1 → single pattern, scale=3 → 3x3 tiling (9 copies)
-- Controlled via slider (0.5x–5x), +/- buttons, mouse wheel, or pinch-to-zoom
-- Math: coordinates are multiplied by scale before being fed to the Chladni function; since it's periodic, this naturally creates seamless tiling
+### Visualization Modes
+- **Particles** — 5000 particles migrate to nodal lines (Canvas 2D, 60fps)
+- **Water** — 3D height-field renderer with Blinn-Phong lighting, caustic glow, Fresnel darkening (Canvas 2D `putImageData`, 250x250 grid)
+
+### Plate Shapes
+- **Square** — Chladni patterns: `cos(nπx/L)·cos(mπy/L) ± cos(mπx/L)·cos(nπy/L)`
+- **Circular** — Bessel patterns: `J_n(k_nm·r/R)·cos(nθ)` with precomputed zeros table
+
+### Multi-frequency Layering
+Stack 2-3 frequencies — their Chladni/Bessel fields superpose: `Σ weight_i · field_i(x,y)`.
+Creates complex interference patterns. 4 presets (Harmony, Tension, Full Spectrum, Heart+Crown).
+
+### Export
+- **PNG** — `canvas.toDataURL()` instant download
+- **Video** — `MediaRecorder` + `captureStream()` for WebM recording
+
+### Guided Sessions
+5 preset meditation journeys with circular SVG countdown, auto-crossfade between frequencies, synthesized bell on completion.
 
 ### Key Directories
 - `lib/` — pure math and audio utilities (no React)
-  - `chladni.js` — Chladni value/gradient functions with scale param, frequency-to-mode mapping, preset data
-  - `audioAnalysis.js` — dominant frequency extraction (autocorrelation + FFT fallback), amplitude, frequency bands
+  - `chladni.js` — Chladni value/gradient, Bessel J0/J1/Jn approximation + zeros table, `besselValue/Gradient`, `multiValue/Gradient`, `frequencyToModes`, presets, layer presets
+  - `audioAnalysis.js` — YIN-inspired pitch detection, amplitude, frequency bands
+  - `binauralAudio.js` — dual-oscillator stereo panning factory + brainwave presets
+  - `exportUtils.js` — PNG download + MediaRecorder WebM recording
+  - `sessionPresets.js` — guided session step arrays + formatTime utility
 - `components/` — React components
-  - `CymaticsCanvas.jsx` — 5000-particle simulation on HTML5 Canvas at 60fps, wheel/pinch zoom
-  - `ToneGenerator.jsx` — oscillator + frequency slider + presets + mode buttons
-  - `MicrophoneInput.jsx` — mic permission handling + real-time pitch display
-  - `FilePlayer.jsx` — audio file upload/drop + playback controls + frequency analysis
-  - `SampleLibrary.jsx` — 8 sacred sounds with multi-oscillator synthesis + reference pattern images
-  - `ModeSelector.jsx` — tab bar switching between 4 input modes
-  - `CymaticsApp.jsx` — top-level orchestrator, manages shared state (frequency, n/m, zoom, analyser)
+  - `CymaticsCanvas.jsx` — particle renderer with square/circular plate, multi-freq support, forwardRef
+  - `WaterCanvas.jsx` — 3D water surface renderer (height-field + Blinn-Phong + caustics)
+  - `ToneGenerator.jsx` — oscillator + binaural beats + forwardRef for session timer control
+  - `MicrophoneInput.jsx` — YIN pitch detection + confidence bar + frequency smoothing
+  - `FilePlayer.jsx` — audio file upload/drop + playback + frequency analysis
+  - `SampleLibrary.jsx` — 8 sacred sounds with reference pattern images
+  - `FrequencyLayers.jsx` — multi-frequency layer UI (add/remove, weight sliders, presets)
+  - `SessionTimer.jsx` — guided session with circular countdown, step indicators, bell
+  - `ModeSelector.jsx` — vertical icon sidebar (desktop) + horizontal tabs (mobile)
+  - `CymaticsApp.jsx` — top-level orchestrator, 3-column layout, all state management
 - `app/` — Next.js App Router shell
-- `public/samples/` — reference Chladni pattern PNGs for each sample sound (generated via mathviz)
+- `public/samples/` — reference Chladni pattern PNGs
 
 ### Data Flow
-`AudioSource (Tone|Mic|File|Samples)` -> `AnalyserNode` -> `CymaticsCanvas`
-Each mode provides frequency + n/m modes + analyser ref up to `CymaticsApp`, which passes them + zoom down to the canvas.
+```
+AudioSource (Tone|Mic|File|Samples)
+  → AnalyserNode
+  → CymaticsApp (frequency, n, m, zoom, plateShape, layers, renderMode)
+  → CymaticsCanvas (particles) OR WaterCanvas (3D surface)
+```
+
+### Layout
+Desktop: 3-column (icon sidebar 48px | controls panel 340px collapsible | canvas fills rest).
+Mobile: stacked vertical.
 
 ## Commands
 - `npm run dev` — start dev server on port 3000
@@ -47,6 +74,8 @@ Each mode provides frequency + n/m modes + analyser ref up to `CymaticsApp`, whi
 
 ## Conventions
 - All components are client components (`"use client"`)
-- Inline styles used for dynamic color theming (hue shifts with frequency)
-- Tailwind used for layout and static styles
-- No external audio/visualization libraries — pure Web Audio API + Canvas 2D
+- Inline styles for dynamic color theming (hue shifts with frequency)
+- Tailwind for layout and static styles
+- Zero external audio/visualization libraries — pure Web Audio API + Canvas 2D
+- Bessel function uses Abramowitz & Stegun rational polynomial approximation (no deps)
+- Water renderer uses `putImageData` without DPR scaling (CSS handles upscale)

@@ -1,52 +1,74 @@
 # Cymatics Visualizer
 
-Real-time cymatics simulator that transforms sound into sacred geometry. Watch 5,000 particles arrange themselves into Chladni patterns — the same geometric figures that form when sand is placed on a vibrating plate.
+Real-time cymatics simulator that transforms sound into sacred geometry. Watch particles arrange into Chladni patterns, Bessel patterns on circular plates, or view a lit 3D water surface — all driven by your sound.
 
 ## Features
 
 ### Four Audio Input Modes
 
 **Tone Generator**
-- Pure oscillator with sine, square, triangle, and sawtooth waveforms
-- Frequency slider (100–1000 Hz) with real-time pattern morphing
+- Oscillator with sine, square, triangle, and sawtooth waveforms
+- Frequency slider (20–4000 Hz)
 - 10 Solfeggio/healing frequency presets (174–963 Hz)
-- Manual vibration mode controls (N, M) for fine pattern tuning
+- Vibration mode controls (N, M) up to 15
+- Binaural beats: dual-oscillator stereo panning with 5 brainwave presets (Delta, Theta, Alpha, Beta, Gamma)
 
 **Microphone**
-- Live audio capture with real-time pitch detection
-- Bass/mid/high frequency band visualization
+- Live audio capture with YIN pitch detection and median smoothing
+- Confidence indicator + bass/mid/high band visualization
 - Sing, hum, or play an instrument — the pattern follows the dominant pitch
 
 **Audio File**
 - Drag-and-drop or click-to-upload (MP3, WAV, OGG, FLAC)
 - Full playback controls (play/pause, seek, skip)
-- Real-time FFT analysis drives pattern visualization as your music plays
+- Real-time FFT analysis drives pattern visualization
 
 **Sample Library**
-- 8 sacred/famous sounds synthesized with rich harmonics:
-  - Om (AUM) — 136.1 Hz
-  - Crystal Bowl C — 256 Hz
-  - Tibetan Singing Bowl — 333 Hz
-  - 432 Hz Natural A (Verdi tuning)
-  - 528 Hz Miracle Tone
-  - 639 Hz Heart Frequency
-  - 741 Hz Throat Frequency
-  - 963 Hz Crown Frequency
-- Each sample includes a **reference Chladni pattern image** for visual verification
-- Tap any sample to hear the sound and watch particles form the expected pattern
+- 8 sacred sounds (Om, Crystal Bowl, Tibetan Bowl, Solfeggio tones)
+- Each sample includes a reference Chladni pattern image for verification
+
+### Two Plate Shapes
+
+- **Square plate** — classic Chladni patterns with crossing nodal lines
+- **Circular plate** — Bessel function patterns with concentric rings and angular nodes
+
+### Two Render Modes
+
+- **Particles** — 5,000 particles simulating sand migrating to nodal lines
+- **Water** — 3D lit water surface with specular highlights, caustic glow on nodal lines, and Fresnel edge darkening
+
+### Multi-frequency Layering
+
+Stack 2-3 frequencies simultaneously. Their fields superpose, creating interference patterns far more complex than any single frequency. Includes 4 presets: Harmony, Tension, Full Spectrum, Heart+Crown.
+
+### Export
+
+- **PNG** — instant screenshot download
+- **Video** — WebM recording via MediaRecorder (start/stop, shows elapsed time)
+
+### Binaural Beats
+
+Two oscillators panned left/right create a perceived beat frequency in the brain. 5 brainwave presets:
+- Delta (2 Hz) — Deep Sleep
+- Theta (6 Hz) — Meditation
+- Alpha (10 Hz) — Relaxation
+- Beta (20 Hz) — Focus
+- Gamma (35 Hz) — Awareness
+
+### Guided Sessions
+
+5 preset meditation journeys with circular countdown timer:
+- Solfeggio Journey (30 min) — all 10 healing frequencies
+- Deep Meditation (20 min) — 432 Hz
+- Focus Flow (25 min) — 528 Hz Pomodoro
+- Quick Calm (10 min) — 528 Hz → 432 Hz
+- Sleep Preparation (15 min) — descending frequencies
+
+Auto-crossfade between steps, synthesized bell on completion.
 
 ### Pattern Zoom / Tiling
-- **Repeat slider** (0.5x–5x) tiles the pattern across the canvas
-- At 1x you see a single pattern; at 3x you get a 3x3 tiling with 9 copies creating intricate sacred geometry
-- **Mouse wheel** zoom directly on the canvas
-- **Pinch-to-zoom** on touch devices
-- **+/- buttons** for precise control
 
-### Visualization
-- 5,000 particles simulating Chladni plate physics
-- Particles drift toward nodal lines (zero-displacement zones)
-- Frequency-dependent color shifting and glow effects
-- 60fps Canvas 2D rendering
+Repeat slider (0.5x–5x) tiles the pattern. Mouse wheel + pinch-to-zoom supported.
 
 ## Getting Started
 
@@ -61,43 +83,59 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 - **Next.js 15** — App Router
 - **Tailwind CSS v4** — styling
-- **Web Audio API** — tone generation, microphone capture, FFT analysis
-- **Canvas 2D** — particle rendering
+- **Web Audio API** — tone generation, binaural beats, mic capture, FFT
+- **Canvas 2D** — particle rendering + 3D water height-field
 
-No external audio or visualization libraries are used.
+Zero external audio or visualization libraries. Bessel functions use Abramowitz & Stegun polynomial approximation.
 
 ## Project Structure
 
 ```
 cymatics-visualizer/
 ├── app/
-│   ├── layout.js           # Root layout
-│   ├── page.js             # Renders CymaticsApp
-│   └── globals.css         # Tailwind + custom styles
+│   ├── layout.js              # Root layout
+│   ├── page.js                # Renders CymaticsApp
+│   └── globals.css            # Tailwind + custom styles
 ├── components/
-│   ├── CymaticsApp.jsx     # Top-level orchestrator
-│   ├── CymaticsCanvas.jsx  # Particle simulation + canvas + zoom
-│   ├── ToneGenerator.jsx   # Oscillator + presets
-│   ├── MicrophoneInput.jsx # Live mic capture + pitch display
-│   ├── FilePlayer.jsx      # Audio file upload + playback
-│   ├── SampleLibrary.jsx   # Sacred sounds + reference images
-│   └── ModeSelector.jsx    # Tab bar for 4 input modes
+│   ├── CymaticsApp.jsx        # Orchestrator (3-column layout, all state)
+│   ├── CymaticsCanvas.jsx     # Particle renderer (square + circular plates)
+│   ├── WaterCanvas.jsx        # 3D water surface (Blinn-Phong + caustics)
+│   ├── ToneGenerator.jsx      # Oscillator + binaural beats
+│   ├── MicrophoneInput.jsx    # YIN pitch detection + smoothing
+│   ├── FilePlayer.jsx         # Audio file upload + playback
+│   ├── SampleLibrary.jsx      # Sacred sounds + reference images
+│   ├── FrequencyLayers.jsx    # Multi-frequency layer UI
+│   ├── SessionTimer.jsx       # Guided session countdown
+│   └── ModeSelector.jsx       # Sidebar icons + mobile tabs
 ├── lib/
-│   ├── chladni.js          # Chladni math (with scale/zoom)
-│   └── audioAnalysis.js    # FFT analysis + pitch detection
+│   ├── chladni.js             # Chladni + Bessel math, multi-freq, presets
+│   ├── audioAnalysis.js       # YIN pitch detection + FFT
+│   ├── binauralAudio.js       # Dual-oscillator stereo graph
+│   ├── exportUtils.js         # PNG + WebM recording
+│   └── sessionPresets.js      # Guided session journeys
 └── public/
-    └── samples/            # Reference pattern PNGs
+    └── samples/               # Reference pattern PNGs
 ```
 
 ## The Math
 
-Chladni patterns on a square plate are described by:
-
+**Square plate (Chladni):**
 ```
 f(x, y) = cos(nπsx/L) · cos(mπsy/L) ± cos(mπsx/L) · cos(nπsy/L)
 ```
 
-where `s` is the zoom/scale factor. Particles are pushed toward the nodal lines where `f(x, y) = 0`. The gradient determines force direction, the value determines magnitude. Increasing `s` tiles the pattern — since the function is periodic, this creates seamless repetition.
+**Circular plate (Bessel):**
+```
+f(r, θ) = J_n(k_nm · r/R) · cos(nθ)
+```
+where `J_n` is the Bessel function of the first kind, `k_nm` is the mth zero of `J_n`.
+
+**Multi-frequency superposition:**
+```
+F(x, y) = Σ w_i · f_i(x, y)
+```
+
+Particles are pushed toward nodal lines where `F = 0`. The water renderer maps the field to a height map with per-pixel Blinn-Phong lighting.
 
 ## Deploy
 
