@@ -5,6 +5,7 @@ import { frequencyToModes } from "@/lib/chladni";
 
 export default function FilePlayer({ onFrequencyChange, onModesChange, onActiveChange, onAnalyserReady }) {
   const [file, setFile] = useState(null);
+  const [fileKey, setFileKey] = useState(0);
   const [fileName, setFileName] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -64,16 +65,27 @@ export default function FilePlayer({ onFrequencyChange, onModesChange, onActiveC
 
   const handleFile = useCallback((f) => {
     if (!f || !f.type.startsWith("audio/")) return;
-    setFile(URL.createObjectURL(f));
-    setFileName(f.name);
-    setIsPlaying(false);
-    setCurrentTime(0);
-    connectedRef.current = false;
+    // Stop current playback and detection
+    stopFreqDetection();
+    if (audioRef.current) audioRef.current.pause();
+    if (file) URL.revokeObjectURL(file);
+    // Close old audio context so a fresh one is created on play
     if (audioCtxRef.current) {
       audioCtxRef.current.close();
       audioCtxRef.current = null;
     }
-  }, []);
+    sourceRef.current = null;
+    analyserRef.current = null;
+    connectedRef.current = false;
+    // Increment key to force a new <audio> DOM element (fixes MediaElementSource reuse error)
+    setFileKey((k) => k + 1);
+    setFile(URL.createObjectURL(f));
+    setFileName(f.name);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    onActiveChange(false);
+  }, [file, stopFreqDetection, onActiveChange]);
 
   const play = useCallback(() => {
     if (!audioRef.current) return;
@@ -118,6 +130,7 @@ export default function FilePlayer({ onFrequencyChange, onModesChange, onActiveC
       {/* Hidden audio element */}
       {file && (
         <audio
+          key={fileKey}
           ref={audioRef}
           src={file}
           onLoadedMetadata={() => setDuration(audioRef.current.duration)}
