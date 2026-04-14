@@ -204,8 +204,8 @@ export default function CymaticsCanvas({ frequency, n, m, isActive, analyser, zo
     <canvas
       ref={canvasRef}
       style={{
-        width: PLATE_SIZE,
-        height: PLATE_SIZE,
+        width: "100%",
+        height: "100%",
         display: "block",
         borderRadius: 8,
         touchAction: "none",
