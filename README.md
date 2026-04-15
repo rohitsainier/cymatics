@@ -1,6 +1,6 @@
 # Cymatics Visualizer
 
-Real-time cymatics simulator that transforms sound into sacred geometry. Watch particles arrange into Chladni patterns, Bessel patterns on circular plates, or view a lit 3D water surface — all driven by your sound.
+Real-time cymatics simulator that transforms sound into sacred geometry. Watch particles arrange into Chladni patterns, Bessel patterns on circular plates, or view a lit 3D water surface — all driven by your sound. Zero external visualization dependencies.
 
 ## Features
 
@@ -34,8 +34,8 @@ Real-time cymatics simulator that transforms sound into sacred geometry. Watch p
 
 ### Two Render Modes
 
-- **Particles** — 5,000 particles simulating sand migrating to nodal lines
-- **Water** — 3D lit water surface with specular highlights, caustic glow on nodal lines, and Fresnel edge darkening
+- **Particles** — 5,000 particles simulating sand migrating to nodal lines (Canvas 2D, 60fps)
+- **Water** — 3D height-field surface with Blinn-Phong lighting, Fresnel darkening, ambient occlusion, caustic glow on nodal lines, and bilinear-interpolated 250x250 grid (Canvas 2D)
 
 ### Multi-frequency Layering
 
@@ -61,7 +61,7 @@ Two oscillators panned left/right create a perceived beat frequency in the brain
 - Solfeggio Journey (30 min) — all 10 healing frequencies
 - Deep Meditation (20 min) — 432 Hz
 - Focus Flow (25 min) — 528 Hz Pomodoro
-- Quick Calm (10 min) — 528 Hz → 432 Hz
+- Quick Calm (10 min) — 528 Hz then 432 Hz
 - Sleep Preparation (15 min) — descending frequencies
 
 Auto-crossfade between steps, synthesized bell on completion.
@@ -84,9 +84,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - **Next.js 15** — App Router
 - **Tailwind CSS v4** — styling
 - **Web Audio API** — tone generation, binaural beats, mic capture, FFT
-- **Canvas 2D** — particle rendering + 3D water height-field
+- **Canvas 2D** — particle rendering + water height-field rendering
 
-Zero external audio or visualization libraries. Bessel functions use Abramowitz & Stegun polynomial approximation.
+Zero external audio or visualization libraries. Bessel functions use Abramowitz & Stegun polynomial approximation. Water surface uses per-pixel Blinn-Phong lighting with Fresnel and caustics.
 
 ## Project Structure
 
@@ -99,7 +99,7 @@ cymatics-visualizer/
 ├── components/
 │   ├── CymaticsApp.jsx        # Orchestrator (3-column layout, all state)
 │   ├── CymaticsCanvas.jsx     # Particle renderer (square + circular plates)
-│   ├── WaterCanvas.jsx        # 3D water surface (Blinn-Phong + caustics)
+│   ├── WaterCanvas.jsx        # Water surface (height-field + Blinn-Phong)
 │   ├── ToneGenerator.jsx      # Oscillator + binaural beats
 │   ├── MicrophoneInput.jsx    # YIN pitch detection + smoothing
 │   ├── FilePlayer.jsx         # Audio file upload + playback
@@ -135,7 +135,7 @@ where `J_n` is the Bessel function of the first kind, `k_nm` is the mth zero of 
 F(x, y) = Σ w_i · f_i(x, y)
 ```
 
-Particles are pushed toward nodal lines where `F = 0`. The water renderer maps the field to a height map with per-pixel Blinn-Phong lighting.
+Particles are pushed toward nodal lines where `F = 0`. The water renderer maps the field to a 250x250 height map with bilinear interpolation, per-pixel Blinn-Phong specular, Fresnel edge darkening, and caustic glow on nodal lines.
 
 ## Deploy
 
