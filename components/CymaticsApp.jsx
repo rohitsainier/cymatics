@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import CymaticsCanvas from "./CymaticsCanvas";
 import WaterCanvas from "./WaterCanvas";
+import ThreeCanvas from "./ThreeCanvas";
 import ToneGenerator from "./ToneGenerator";
 import MicrophoneInput from "./MicrophoneInput";
 import FilePlayer from "./FilePlayer";
@@ -196,6 +197,7 @@ export default function CymaticsApp() {
               {[
                 { id: "particles", label: "Particles" },
                 { id: "water", label: "Water" },
+                { id: "three", label: "3D" },
               ].map(({ id, label }) => (
                 <button
                   key={id}
@@ -307,7 +309,15 @@ export default function CymaticsApp() {
               transition: "width 0.3s ease, height 0.3s ease",
             }}
           >
-            {renderMode === "water" ? (
+            {renderMode === "three" ? (
+              <ThreeCanvas
+                ref={canvasRef}
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser}
+                zoom={zoom} onZoomChange={handleZoomChange}
+                plateShape={plateShape} layers={layers}
+              />
+            ) : renderMode === "water" ? (
               <WaterCanvas
                 ref={canvasRef}
                 frequency={frequency} n={n} m={m}
@@ -351,14 +361,55 @@ export default function CymaticsApp() {
             className="relative rounded-xl overflow-hidden w-full"
             style={{ maxWidth: 400, aspectRatio: "1", border: `1px solid ${accentDim}`, boxShadow: `0 0 40px ${accentGlow}10` }}
           >
-            <CymaticsCanvas
-              frequency={frequency} n={n} m={m}
-              isActive={isActive} analyser={analyser}
-              zoom={zoom} onZoomChange={handleZoomChange}
-            />
+            {renderMode === "three" ? (
+              <ThreeCanvas
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser}
+                zoom={zoom} onZoomChange={handleZoomChange}
+                plateShape={plateShape} layers={layers}
+              />
+            ) : renderMode === "water" ? (
+              <WaterCanvas
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser} zoom={zoom}
+                plateShape={plateShape} layers={layers}
+              />
+            ) : (
+              <CymaticsCanvas
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser}
+                zoom={zoom} onZoomChange={handleZoomChange}
+                plateShape={plateShape} layers={layers}
+              />
+            )}
             <div className="absolute bottom-1.5 right-2.5 text-[10px] tabular-nums opacity-50" style={{ color: accentColor }}>{frequency} Hz</div>
             <div className="absolute bottom-1.5 left-2.5 text-[9px] text-[#665f80] opacity-40">n={n} m={m}</div>
           </div>
+        </div>
+
+        <div className="flex gap-1 px-4 py-1.5 max-w-[400px] mx-auto w-full">
+          {[
+            { id: "rectangular", label: "Square" }, { id: "circular", label: "Circle" },
+          ].map(({ id, label }) => (
+            <button key={id} onClick={() => setPlateShape(id)}
+              className="flex-1 py-1 rounded text-[8px] tracking-wider text-center transition-all"
+              style={{
+                background: plateShape === id ? `${accentColor}18` : "transparent",
+                color: plateShape === id ? accentColor : "#554f70",
+                border: `1px solid ${plateShape === id ? accentColor + "50" : "#1a1728"}`,
+              }}>{label}</button>
+          ))}
+          {[
+            { id: "particles", label: "Particles" }, { id: "water", label: "Water" }, { id: "three", label: "3D" },
+          ].map(({ id, label }) => (
+            <button key={id} onClick={() => setRenderMode(id)}
+              className="flex-1 py-1 rounded text-[8px] tracking-wider text-center transition-all"
+              style={{
+                background: renderMode === id ? `${accentColor}18` : "transparent",
+                color: renderMode === id ? accentColor : "#554f70",
+                border: `1px solid ${renderMode === id ? accentColor + "50" : "#1a1728"}`,
+              }}>{label}</button>
+          ))}
         </div>
 
         <div className="flex items-center gap-2 px-4 py-2 max-w-[400px] mx-auto w-full">
