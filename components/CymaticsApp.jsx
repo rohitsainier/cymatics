@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback, useRef, useEffect } from "react";
 import CymaticsCanvas from "./CymaticsCanvas";
-import WaterCanvas from "./WaterCanvas";
+import Water3D from "./Water3D";
 import ThreeCanvas from "./ThreeCanvas";
 import SandCanvas from "./SandCanvas";
 import ToneGenerator from "./ToneGenerator";
@@ -213,6 +213,7 @@ export default function CymaticsApp() {
                 >{label}</button>
               ))}
             </div>
+
           </div>
 
           {/* Scrollable mode controls or session timer */}
@@ -328,7 +329,7 @@ export default function CymaticsApp() {
                 plateShape={plateShape} layers={layers}
               />
             ) : renderMode === "water" ? (
-              <WaterCanvas
+              <Water3D
                 ref={canvasRef}
                 frequency={frequency} n={n} m={m}
                 isActive={isActive} analyser={analyser} zoom={zoom}
@@ -386,7 +387,7 @@ export default function CymaticsApp() {
                 plateShape={plateShape} layers={layers}
               />
             ) : renderMode === "water" ? (
-              <WaterCanvas
+              <Water3D
                 frequency={frequency} n={n} m={m}
                 isActive={isActive} analyser={analyser} zoom={zoom}
                 plateShape={plateShape} layers={layers}
