@@ -3,6 +3,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import CymaticsCanvas from "./CymaticsCanvas";
 import WaterCanvas from "./WaterCanvas";
 import ThreeCanvas from "./ThreeCanvas";
+import SandCanvas from "./SandCanvas";
 import ToneGenerator from "./ToneGenerator";
 import MicrophoneInput from "./MicrophoneInput";
 import FilePlayer from "./FilePlayer";
@@ -198,6 +199,7 @@ export default function CymaticsApp() {
                 { id: "particles", label: "Particles" },
                 { id: "water", label: "Water" },
                 { id: "three", label: "3D" },
+                { id: "sand", label: "Sand" },
               ].map(({ id, label }) => (
                 <button
                   key={id}
@@ -257,12 +259,12 @@ export default function CymaticsApp() {
             </div>
             <div className="flex gap-1.5 mt-1.5">
               <button
-                onClick={() => { const c = document.querySelector("canvas"); if (c?.__kick) c.__kick(); }}
+                onClick={() => { const c = canvasRef.current; if (c?.__kick) c.__kick(); }}
                 className="flex-1 py-1 rounded text-[8px] tracking-wider text-center"
                 style={{ color: "#665f80", border: "1px solid #1a1728" }}
               >Shake</button>
               <button
-                onClick={() => { const c = document.querySelector("canvas"); if (c?.__scatter) c.__scatter(); }}
+                onClick={() => { const c = canvasRef.current; if (c?.__scatter) c.__scatter(); }}
                 className="flex-1 py-1 rounded text-[8px] tracking-wider text-center"
                 style={{ color: "#665f80", border: "1px solid #1a1728" }}
               >Reset</button>
@@ -309,7 +311,15 @@ export default function CymaticsApp() {
               transition: "width 0.3s ease, height 0.3s ease",
             }}
           >
-            {renderMode === "three" ? (
+            {renderMode === "sand" ? (
+              <SandCanvas
+                ref={canvasRef}
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser}
+                zoom={zoom} onZoomChange={handleZoomChange}
+                plateShape={plateShape} layers={layers}
+              />
+            ) : renderMode === "three" ? (
               <ThreeCanvas
                 ref={canvasRef}
                 frequency={frequency} n={n} m={m}
@@ -361,7 +371,14 @@ export default function CymaticsApp() {
             className="relative rounded-xl overflow-hidden w-full"
             style={{ maxWidth: 400, aspectRatio: "1", border: `1px solid ${accentDim}`, boxShadow: `0 0 40px ${accentGlow}10` }}
           >
-            {renderMode === "three" ? (
+            {renderMode === "sand" ? (
+              <SandCanvas
+                frequency={frequency} n={n} m={m}
+                isActive={isActive} analyser={analyser}
+                zoom={zoom} onZoomChange={handleZoomChange}
+                plateShape={plateShape} layers={layers}
+              />
+            ) : renderMode === "three" ? (
               <ThreeCanvas
                 frequency={frequency} n={n} m={m}
                 isActive={isActive} analyser={analyser}
@@ -400,7 +417,7 @@ export default function CymaticsApp() {
               }}>{label}</button>
           ))}
           {[
-            { id: "particles", label: "Particles" }, { id: "water", label: "Water" }, { id: "three", label: "3D" },
+            { id: "particles", label: "Particles" }, { id: "water", label: "Water" }, { id: "three", label: "3D" }, { id: "sand", label: "Sand" },
           ].map(({ id, label }) => (
             <button key={id} onClick={() => setRenderMode(id)}
               className="flex-1 py-1 rounded text-[8px] tracking-wider text-center transition-all"
@@ -420,7 +437,7 @@ export default function CymaticsApp() {
           <button onClick={() => setZoom(Math.min(5, Math.round((zoom + 0.5) * 10) / 10))}
             className="w-6 h-6 rounded flex items-center justify-center text-xs" style={{ border: `1px solid ${accentDim}`, color: accentColor }}>+</button>
           <span className="text-[8px] text-[#665f80] tabular-nums w-6 text-center">{zoom}x</span>
-          <button onClick={() => { const c = document.querySelector("canvas"); if (c?.__kick) c.__kick(); }}
+          <button onClick={() => { const c = canvasRef.current; if (c?.__kick) c.__kick(); }}
             className="px-2 py-1 rounded-full text-[9px] text-[#665f80] border border-[#2a2540]">Shake</button>
         </div>
 
